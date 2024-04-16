@@ -7,3 +7,4 @@ schedules:
     http-method: POST
     oidc-service-account-email: alfredo@devioz-pe-dev-analitica.iam.gserviceaccount.com
     time-zone: "America/Lima"
+    attempt-deadline: "30m"
