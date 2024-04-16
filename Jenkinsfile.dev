@@ -1,0 +1,97 @@
+def readYaml() {
+        echo 'Leyendo yaml'
+        def data = readYaml(file: "${CONF_FILE_PATH}")
+        return data
+    }
+
+def runActionForSchedule(scheduleParams) {
+    def scheduleExists = sh(script: """gcloud --project ${GCP_PROJECT_ID} scheduler jobs list --location ${GCP_LOCATION} | grep ${scheduleParams.name} || echo -n 'false'""", returnStdout: true)
+
+    def scheduleOptions = scheduleParams.clone()
+    scheduleOptions.remove('name')
+    scheduleOptions.remove('action')
+    scheduleOptions = scheduleOptions.collect { "--$it.key '$it.value'" }.join(" ")
+    println scheduleOptions
+    switch (scheduleParams.action) {
+        case 'execute':
+            if (scheduleExists.trim() != 'false') { // Actualizar
+                echo "Updating ${scheduleParams.name}"
+                sh """
+                    gcloud \
+                    --project=${GCP_PROJECT_ID} \
+                    scheduler jobs update http ${scheduleParams.name} \
+                    --location ${GCP_LOCATION} \
+                    ${scheduleOptions}
+                """
+            } else { // Crear
+                echo "Creando ${scheduleParams.name}"
+
+                sh """
+                    gcloud \
+                    --project=${GCP_PROJECT_ID} \
+                    scheduler jobs create http ${scheduleParams.name} \
+                    --location ${GCP_LOCATION} \
+                    ${scheduleOptions}
+                """
+            }
+            break
+        case 'delete':
+            echo "Eliminando ${scheduleParams.name}"
+            sh """
+                gcloud --project=${GCP_PROJECT_ID} scheduler jobs delete ${scheduleParams.name} --location ${GCP_LOCATION} --quiet
+            """
+            break
+        }
+}
+   
+pipeline {
+    agent any
+
+    environment {
+        CONF_FILE_PATH = "./schedules.yaml"
+        SOURCE_DIR = 'source'
+        GCP_PROJECT_ID = 'devioz-pe-dev-analitica'
+        GCP_SERVICE_ACCOUNT = 'devioz-corporativo-gcp-devops-analitica-dev'
+        GCP_LOCATION = 'us-central1'
+    }
+
+    stages {
+        stage('Descarga de Fuentes') {
+            steps {
+                sh "rm -Rf ./*"
+                dir("${SOURCE_DIR}") {
+                    checkout scm
+                }
+            }
+        }
+
+        stage('Cargando configuración') {
+            steps {
+                dir("${SOURCE_DIR}") {
+                    withCredentials([file(credentialsId: "${GCP_SERVICE_ACCOUNT}", variable: 'SECRET_FILE')]) {
+                        sh " \$(gcloud auth activate-service-account --key-file=\$SECRET_FILE) "
+                    }
+                }
+            }
+        }
+
+        stage('Programando schedules') {
+            steps {
+                dir("${SOURCE_DIR}") {
+                    script{
+                        def yamlFile = readYaml()
+                        yamlFile['schedules'].each { schedule ->
+                            runActionForSchedule(schedule)
+                    }
+                    }
+                }
+            }
+        }
+
+        stage('Limpiar Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
+    }
+}

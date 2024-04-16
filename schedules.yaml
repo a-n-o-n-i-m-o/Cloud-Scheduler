@@ -1,0 +1,9 @@
+schedules:
+  - name: SCHEDULER-PRUEBA
+    action: execute #execute
+    schedule: "50 23 * * *"
+    description: "Extracción diaria congreso"
+    uri: https://us-central1-devioz-pe-dev-analitica.cloudfunctions.net/function-1
+    http-method: POST
+    oidc-service-account-email: alfredo@devioz-pe-dev-analitica.iam.gserviceaccount.com
+    time-zone: "America/Lima"
