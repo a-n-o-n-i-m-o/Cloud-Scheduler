@@ -65,30 +65,26 @@ pipeline {
             }
         }
 
-        stage('Cargando configuración') {
+        stage('Activando Service Account') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: GCP_SERVICE_ACCOUNT, variable: 'SECRET_FILE')]) {
-                        // Activa la cuenta de servicio con gcloud
-                        def result = sh(script: "gcloud auth activate-service-account --key-file=\$SECRET_FILE", returnStatus: true)
-                        
-                        // Verifica el resultado y muestra un mensaje de error en caso de fallo
-                        if (result != 0) {
-                            error("Error al activar la cuenta de servicio. Verifique las credenciales y el archivo.")
-                        }
+                    echo 'Iniciando la etapa de Activando Service Account...'
+                    withCredentials([file(credentialsId: "${GCP_SERVICE_ACCOUNT}", variable: 'SECRET_FILE')]) {
+                        sh """\$(gcloud auth activate-service-account --key-file=\$SECRET_FILE)"""
                     }
+                    echo 'Service Account activada correctamente.'
                 }
             }
         }
-
+        
         stage('Programando schedules') {
             steps {
                 dir("${SOURCE_DIR}") {
-                    script {
-                        def yamlFile = readYaml(file: "${CONF_FILE_PATH}")
+                    script{
+                        def yamlFile = readYaml()
                         yamlFile['schedules'].each { schedule ->
                             runActionForSchedule(schedule)
-                        }
+                    }
                     }
                 }
             }
