@@ -49,7 +49,6 @@ pipeline {
 
     environment {
         CONF_FILE_PATH = "./schedules.yaml"
-        SOURCE_DIR = 'source'
         GCP_PROJECT_ID = 'devioz-pe-dev-analitica'
         GCP_SERVICE_ACCOUNT = 'devioz-corporativo-gcp-devops-analitica-dev'
         GCP_LOCATION = 'us-central1'
@@ -59,9 +58,7 @@ pipeline {
         stage('Descarga de Fuentes') {
             steps {
                 sh "rm -Rf ./*"
-                dir("${SOURCE_DIR}") {
-                    checkout scm
-                }
+                    checkout scm    
             }
         }
 
@@ -79,14 +76,14 @@ pipeline {
         
         stage('Programando schedules') {
             steps {
-                dir("${SOURCE_DIR}") {
+             
                     script{
                         def yamlFile = readYaml()
                         yamlFile['schedules'].each { schedule ->
                             runActionForSchedule(schedule)
                     }
                     }
-                }
+                
             }
         }
 
