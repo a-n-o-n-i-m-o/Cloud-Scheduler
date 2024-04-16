@@ -49,7 +49,7 @@ pipeline {
 
     environment {
         CONF_FILE_PATH = "./schedules.yaml"
-        SOURCE_DIR = 'source'
+        SOURCE_DIR = '.'
         GCP_PROJECT_ID = 'devioz-pe-dev-analitica'
         GCP_SERVICE_ACCOUNT = 'devioz-corporativo-gcp-devops-analitica-dev'
         GCP_LOCATION = 'us-central1'
